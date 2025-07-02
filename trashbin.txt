@@ -1,0 +1,1899 @@
+const express = require("express");
+const passport = require("passport");
+const router = express.Router();
+const { generateToken } = require("../utils/token");
+ 
+router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+
+router.get("/auth/google/callback",
+  passport.authenticate("google", { session: false }),
+  (req, res) => {
+    const { generateToken } = require("../utils/token");
+    const token = generateToken(req.user._id);
+
+    res.json({
+      msg: "OAuth login successful",
+      token,
+      user: {
+        _id: req.user._id,
+        name: req.user.name,
+        email: req.user.email
+      }
+    });
+  }
+);
+ 
+outer.get(
+  "/github/callback",
+  passport.authenticate("github", { failureRedirect: "/" }),
+  (req, res) => {
+    const token = generateToken(req.user._id);
+    res.redirect(`${process.env.CLIENT_URL}/oauth-success?token=${token}`);
+  }
+);
+ 
+/ After successful login, issue token
+ 
+    // ✅ Instead of redirecting, return JSON
+ 
+router.get(
+  "/google/callback",
+  passport.authenticate("google", { failureRedirect: "/" }),
+  (req, res) => {
+    const token = generateToken(req.user._id);
+    res.redirect(`${process.env.CLIENT_URL}/oauth-success?token=${token}`);
+  }
+);
+ 
+const stopTaskTimer = async (req, res, next) => {
+  try {
+    const task = await Task.findOne({
+      _id: req.params.id,
+      user: req.user.id,
+    });
+
+    if (!task) return next(new Error("Task not found or unauthorized"));
+    if (!task.isRunning || !task.startTime) {
+      return next(new Error("Timer not running"));
+    }
+};
+ 
+
+
+    const now = new Date();
+const elapsed = calculateDuration(task.startTime, now);
+
+    task.isRunning = false;
+    task.endTime = now;
+    task.duration += elapsed;
+    task.startTime = null;
+    await task.save();
+
+    logger.info(`Timer stopped for task ${task._id} | +${elapsed}s`);
+    res.status(200).json({ msg: "Timer stopped", task });
+  } catch (err) {
+    next(err);
+  }
+ 
+    // ✅ Mark the parent project as running
+ 
+const startTaskTimer = async (req, res, next) => {
+  try {
+    const task = await Task.findOne({
+      _id: req.params.id,
+      user: req.user.id,
+    });
+
+    if (!task) return next(new Error("Task not found or unauthorized"));
+
+    task.isRunning = true;
+    task.startTime = new Date();
+    await task.save();
+
+    logger.info(`Timer started for task ${task._id}`);
+    res.status(200).json({ msg: "Timer started", task });
+  } catch (err) {
+    next(err);
+  }
+};
+
+ 
+const verifyLink = `${process.env.CLIENT_URL}/verify-email/${verifyToken}`;
+ 
+    logger.info(Email verified: ${user.email});
+ 
+const registerUser = async (req, res, next) => {
+  Upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "cv", maxCount: 1 },
+  ])(req, res, async (err) => {
+    try {
+      if (err) {
+        logger.warn("Multer error:", err.message);
+        return next(new Error(err.message));
+      }
+
+      const { name, email, password } = req.body;
+      if (!name || !email || !password) {
+        return next(new Error("All fields are required."));
+      }
+
+      const existing = await User.findOne({ email });
+      if (existing) return next(new Error("User already exists."));
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const user = await User.create({
+        name,
+        email,
+        password: hashedPassword,
+        image: req.files?.image?.[0]?.filename || null,
+        cv: req.files?.cv?.[0]?.filename || null,
+      });
+
+      const verifyToken = generateVerifyToken(user._id);
+      const verifyLink = `${process.env.CLIENT_URL}/verify-email/${verifyToken}`;
+
+      await sendEmail({
+        to: user.email,
+        subject: "Verify Your DevTrack Account",
+        text: `Hello ${user.name}, please verify your email by clicking: ${verifyLink}`,
+      });
+
+      logger.info(`User registered: ${user.email}`);
+      res.status(201).json({
+        msg: "User registered. Verification email sent.",
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          image: `/uploads/${user.image}`,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+};
+
+
+const verifyEmail = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user) return next(new Error("User not found"));
+    if (user.isVerified) return next(new Error("Already verified"));
+
+    user.isVerified = true;
+    await user.save();
+
+    logger.info(`Email verified: ${user.email}`);
+    res.json({ msg: "Email verified successfully" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+ 
+const { validationResult } = require("express-validator");
+
+const validateRequest = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      msg: "Validation failed",
+      errors: errors.array().map(err => ({
+        field: err.param,
+        message: err.msg,
+      })),
+    });
+  }
+  next();
+};
+
+module.exports = validateRequest;
+ 
+    [
+      
+    ],
+ 
+  body("name").notEmpty(),
+        body("email").isEmail(),
+        body("password").isLength({min : 6})
+ 
+    [
+        body("name").notEmpty(),
+        body("email").isEmail(),
+        body("password").isLength({min : 6})
+    ],
+ 
+const { validationResult } = require("express-validator");
+
+const validateRequest = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      msg: "Validation failed",
+      errors: errors.array().map(err => ({
+        field: err.param,
+        message: err.msg,
+      })),
+    });
+  }
+  next();
+};
+
+module.exports = validateRequest;
+ 
+ const conn = await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+ 
+const {body} = require("express - validator");
+ 
+const {body} = require("express - validator");
+ 
+const {body} = require("express - validator");
+ 
+const { formatDuration } = require("../utils/calculateTime");
+const Task = require("../models/Task");
+const Project = require("../models/Project");
+const logger = require("../utils/logger");
+
+
+
+const getTaskStats = async (req, res, next) => {
+  try {
+    const stats = await Task.aggregate([
+      { $match: { user: req.user.id } },
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ]);
+
+    const formatted = {
+      todo: 0,
+      "in-progress": 0,
+      done: 0,
+    };
+
+    stats.forEach((s) => {
+      formatted[s._id] = s.count;
+    });
+
+    res.status(200).json({ stats: formatted });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const getTimeSpent = async (req, res, next) => {
+  try {
+    const tasks = await Task.find({ user: req.user.id });
+    const totalDuration = tasks.reduce((acc, t) => acc + (t.duration || 0), 0);
+
+res.status(200).json({
+  totalDuration,                       
+  formatted: formatDuration(totalDuration), 
+});
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const getProjectTaskSummary = async (req, res, next) => {
+  try {
+    const tasks = await Task.aggregate([
+      { $match: { user: req.user._id } },
+      {
+        $group: {
+          _id: "$project",
+          total: { $sum: 1 },
+          done: { $sum: { $cond: [{ $eq: ["$status", "done"] }, 1, 0] } },
+        },
+      },
+    ]);
+
+    const projects = await Project.find({ user: req.user.id }).select("name");
+
+    const summary = tasks.map((item) => {
+      const project = projects.find((p) => p._id.toString() === item._id.toString());
+      return {
+        projectId: item._id,
+        projectName: project?.name || "Unknown",
+        totalTasks: item.total,
+        completedTasks: item.done,
+      };
+    });
+
+    res.status(200).json({ summary });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const getActivityByDateRange = async (req, res, next) => {
+  try {
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+      return next(new Error("Both 'from' and 'to' date parameters are required"));
+    }
+
+    const start = new Date(from);
+    const end = new Date(to);
+
+    const tasks = await Task.find({
+      user: req.user.id,
+      updatedAt: { $gte: start, $lte: end },
+    });
+
+    res.status(200).json({ count: tasks.length, tasks });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  getTaskStats,
+  getTimeSpent,
+  getProjectTaskSummary,
+  getActivityByDateRange,
+};
+ 
+ // in seconds
+ 
+as "HH:MM:SS"
+ 
+    res.status(200).json({ totalDuration }); // in seconds
+ 
+    const elapsed = Math.floor((now - task.startTime) / 1000); // in seconds
+ 
+// Convert ms to seconds
+ 
+// Format seconds as HH:MM:SS
+ 
+// Calculate time difference between two dates (in seconds)
+ 
+// Optional: Catch uncaught promise rejections
+ 
+/Exit if DB connection fails
+ 
+// Connect to DB and start server
+ 
+const mongoose = require('mongoose');
+const app = require('./app');
+const connectDB = require('./config/db');
+require('dotenv').config();
+
+const PORT = process.env.PORT || 3900;
+
+
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(` Server running at http://localhost:${PORT}`);
+  });
+});
+ 
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const GitHubStrategy = require("passport-github2").Strategy;
+const User = require("../models/User");
+
+// Serialize user to session
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+// Deserialize user from session
+passport.deserializeUser(async (id, done) => {
+  const user = await User.findById(id);
+  done(null, user);
+});
+
+// Google Strategy
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: "/auth/google/callback",
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      let user = await User.findOne({ email: profile.emails[0].value });
+      if (!user) {
+        user = await User.create({
+          name: profile.displayName,
+          email: profile.emails[0].value,
+          isVerified: true,
+        });
+      }
+      return done(null, user);
+    }
+  )
+);
+
+// GitHub Strategy
+passport.use(
+  new GitHubStrategy(
+    {
+      clientID: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      callbackURL: "/auth/github/callback",
+      scope: ["user:email"],
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      const primaryEmail = profile.emails?.[0]?.value;
+      if (!primaryEmail) return done(new Error("No email found"));
+
+      let user = await User.findOne({ email: primaryEmail });
+      if (!user) {
+        user = await User.create({
+          name: profile.displayName || profile.username,
+          email: primaryEmail,
+          isVerified: true,
+        });
+      }
+      return done(null, user);
+    }
+  )
+);
+ 
+ 👈 OAuth Strategies
+ 
+require("dotenv").config(); 
+
+const express = require("express");
+const cors = require("cors");
+const morgan = require("morgan");
+const session = require("express-session");
+const passport = require("passport");
+
+require("./config/passport"); 
+
+const userRoutes = require("./routes/userRoutes");
+const projectRoutes = require("./routes/projectRoutes");
+const taskRoutes = require("./routes/taskRoutes");
+const reportRoutes = require("./routes/reportRoutes");
+const authRoutes = require("./routes/authRoutes");
+
+const errorHandler = require("./middlewares/errorMiddleware");
+
+const app = express();
+
+
+app.use(cors());
+app.use(express.json());
+app.use(morgan(process.env.NODE_ENV === "production" ? "tiny" : "dev"));
+app.use("/uploads", express.static("uploads"));
+
+
+app.use(
+  session({
+    secret: process.env.JWT_SECRET,
+    resave: false,
+    saveUninitialized: false,
+  })
+);
+
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+
+app.use("/api/users", userRoutes);
+app.use("/api/projects", projectRoutes);
+app.use("/api/tasks", taskRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/auth", authRoutes); 
+
+
+app.use(errorHandler);
+
+module.exports = app;
+ 
+OAuth login handlers
+ 
+// ✅ Global Error Middleware (ALWAYS LAST)
+ 
+// ✅ Routes
+ 
+// ✅ Passport init
+ 
+// ✅ Sessions for Passport
+ 
+// ✅ Middleware stack
+ 
+/ ✅ OAuth Strategies
+ 
+ ✅ Load env FIRST
+ 
+const express = require("express");
+const cors =  require("cors");
+const app = express();
+const userRoutes = require("./routes/userRoutes");
+const projectRoutes = require("./routes/projectRoutes");
+const taskRoutes = require("./routes/taskRoutes");
+const reportRoutes = require("./routes/reportRoutes");
+
+app.use("/api/users", userRoutes);
+app.use("/api/projects", projectRoutes);
+app.use("/api/tasks", taskRoutes);
+app.use("/api/reports", reportRoutes);
+require("dotenv").config();
+
+
+app.use(cors ());
+app.use(express.json());
+
+app.use('/uploads', express.static('uploads'));
+
+
+
+module.exports = app;
+
+
+
+ 
+// ✅ Reset Passwor
+ 
+// ✅ Forgot Password
+ 
+// ✅ Delete User
+ 
+// ✅ Update Profile
+ 
+// ✅ Get Profile
+ 
+✅ Login
+ 
+// ✅ Verify Email
+ 
+// ✅ Register
+ 
+require("dotenv").config();
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const path = require("path");
+const User = require("../models/User");
+const Upload = require("../utils/multerConfig");
+const sendEmail = require("../utils/mailer");
+const { generateToken, generateVerifyToken } = require("../utils/token");
+const logger = require("../utils/logger");
+
+
+const registerUser = async (req, res) => {
+  Upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "cv", maxCount: 1 },
+  ])(req, res, async (err) => {
+    try {
+      if (err) {
+        logger.warn("Multer upload error:", err.message); 
+        return res.status(400).json({ msg: err.message });
+      }
+
+      const { name, email, password } = req.body;
+      if (!name || !email || !password) {
+        return res.status(400).json({ msg: "All fields are required." });
+      }
+
+      const existing = await User.findOne({ email });
+      if (existing) {
+        logger.info(`Registration failed: User with email ${email} already exists.`); 
+        return res.status(400).json({ msg: "User already exists." });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const user = await User.create({
+        name,
+        email,
+        password: hashedPassword,
+        image: req.files?.image?.[0]?.filename || null,
+        cv: req.files?.cv?.[0]?.filename || null,
+      });
+
+      const verifyToken = generateVerifyToken(user._id);
+      const verifyLink = `${process.env.CLIENT_URL}/verify-email/${verifyToken}`;
+
+      await sendEmail({
+        to: user.email,
+        subject: "Verify Your DevTrack Account",
+        text: `Hello ${user.name}, please verify your email by clicking: ${verifyLink}`,
+      });
+
+      logger.info(`User registered: ${user.email}`); 
+
+      res.status(201).json({
+        msg: "User registered. Verification email sent.",
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          image: `/uploads/${user.image}`,
+        },
+      });
+    } catch (error) {
+      logger.error("Register error:", error); 
+      res.status(500).json({ msg: "Server error", error: error.message });
+    }
+  });
+};
+
+
+const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user) return res.status(404).json({ msg: "User not found" });
+    if (user.isVerified) return res.status(400).json({ msg: "Already verified" });
+
+    user.isVerified = true;
+    await user.save();
+
+    logger.info(`User verified email: ${user.email}`); 
+    res.json({ msg: "Email verified successfully" });
+  } catch (err) {
+    logger.error("Email verification failed:", err); 
+    res.status(400).json({ msg: "Invalid or expired token" });
+  }
+};
+
+
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email }).select("+password");
+
+    if (!user || !(await user.matchPassword(password))) {
+      logger.warn(`Login failed for email: ${email}`); 
+      return res.status(400).json({ msg: "Invalid credentials" });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({ msg: "Please verify your email first." });
+    }
+
+    const token = generateToken(user._id);
+
+    logger.info(`User logged in: ${email}`); 
+    res.json({
+      msg: "Login successful",
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        token,
+        image: `/uploads/${user.image}`,
+      },
+    });
+  } catch (err) {
+    logger.error("Login error:", err); 
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+
+const getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    logger.info(`Profile fetched for user: ${user.email}`); 
+    res.json({
+      ...user._doc,
+      image: user.image ? `/uploads/${user.image}` : null,
+    });
+  } catch (err) {
+    logger.error("Get profile error:", err); 
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+
+const updateUserProfile = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (password) user.password = password;
+
+    await user.save();
+
+    logger.info(`Profile updated for user: ${user.email}`); 
+    res.json({ msg: "Profile updated", user });
+  } catch (err) {
+    logger.error("Update profile error:", err); 
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+
+const deleteUserAccount = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    await user.deleteOne();
+
+    logger.info(`User deleted account: ${user.email}`); 
+    res.json({ msg: "User deleted" });
+  } catch (err) {
+    logger.error("Delete user error:", err); 
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
+    await user.save();
+
+    const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+
+    await sendEmail({
+      to: email,
+      subject: "Reset Your Password",
+      text: `Click here to reset your password: ${resetLink}`,
+    });
+
+    logger.info(`Password reset link sent to: ${email}`); 
+    res.json({ msg: "Reset link sent" });
+  } catch (err) {
+    logger.error("Forgot password error:", err); 
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+
+const resetPassword = async (req, res) => {
+  try {
+    const resetToken = req.params.token;
+    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) return res.status(400).json({ msg: "Token expired or invalid" });
+
+    const { password } = req.body;
+    if (!password || password.length < 6) {
+      return res.status(400).json({ msg: "Password must be at least 6 chars" });
+    }
+
+    user.password = password;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    logger.info(`Password reset successful for user: ${user.email}`); 
+    res.json({ msg: "Password reset successful" });
+  } catch (err) {
+    logger.error("Reset password error:", err); 
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+module.exports = {
+  registerUser,
+  loginUser,
+  getUserProfile,
+  updateUserProfile,
+  deleteUserAccount,
+  forgotPassword,
+  resetPassword,
+  verifyEmail,
+};
+ 
+// ✅ Internal use: find project by ID
+ 
+// ✅ Delete Project (cascade delete tasks)
+ 
+// ✅ Update Project
+ 
+// ✅ Get Single Project
+ 
+// ✅ Get All Projects by User
+ 
+// ✅ Create Project
+ 
+require("dotenv").config();
+const Project = require("../models/Project");
+const User = require("../models/User");
+const Task = require("../models/Task");
+const logger = require("../utils/logger");
+
+
+const createProject = async (req, res) => {
+  try {
+    const { name, description, startTime, isRunning } = req.body;
+
+    if (!name || !description || !startTime) {
+      return res.status(400).json({ msg: "All fields are required." });
+    }
+
+    const newProject = await Project.create({
+      name,
+      description,
+      startTime,
+      isRunning: isRunning ?? false,
+      user: req.user.id, 
+    });
+
+    logger.info(`Project created: ${newProject._id} by user ${req.user.id}`);
+    res.status(201).json({ msg: "Project created", project: newProject });
+  } catch (err) {
+    logger.error("Create project error:", err);
+    res.status(500).json({ msg: "Server error" });
+  }
+};
+
+
+const getProjects = async (req, res) => {
+  try {
+    const projects = await Project.find({ user: req.user.id });
+    res.status(200).json({ projects });
+  } catch (err) {
+    logger.error("Get projects error:", err);
+    res.status(500).json({ msg: "Server error" });
+  }
+};
+
+
+const getProjectById = async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+
+    if (!project || project.user.toString() !== req.user.id) {
+      return res.status(404).json({ msg: "Project not found or unauthorized" });
+    }
+
+    res.status(200).json({ project });
+  } catch (err) {
+    logger.error("Get project by ID error:", err);
+    res.status(500).json({ msg: "Server error" });
+  }
+};
+
+
+const updateProject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await Project.findOneAndUpdate(
+      { _id: id, user: req.user.id },
+      req.body,
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ msg: "Project not found or unauthorized" });
+    }
+
+    logger.info(`Project updated: ${updated._id}`);
+    res.status(200).json({ msg: "Project updated", project: updated });
+  } catch (err) {
+    logger.error("Update project error:", err);
+    res.status(500).json({ msg: "Server error" });
+  }
+};
+
+
+const deleteProject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const project = await Project.findOneAndDelete({ _id: id, user: req.user.id });
+
+    if (!project) {
+      return res.status(404).json({ msg: "Project not found or unauthorized" });
+    }
+
+    await Task.deleteMany({ project: id }); 
+    logger.info(`Project & tasks deleted: ${id}`);
+
+    res.status(200).json({ msg: "Project and related tasks deleted" });
+  } catch (err) {
+    logger.error("Delete project error:", err);
+    res.status(500).json({ msg: "Server error" });
+  }
+};
+
+
+const findProject = async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) {
+      return res.status(404).json({ msg: "Project not found" });
+    }
+    res.status(200).json({ project });
+  } catch (err) {
+    logger.error("Find project error:", err);
+    res.status(500).json({ msg: "Server error" });
+  }
+};
+
+module.exports = {
+  createProject,
+  getProjects,
+  getProjectById,
+  updateProject,
+  deleteProject,
+  findProject,
+};
+ 
+// ✅ 4. Activity Between Dates
+ 
+// ✅ 3. Project-wise Task Summary
+ 
+// ✅ 2. Total Time Spent
+ 
+// ✅ 1. Task Status Stats
+ 
+// ✅ 1. Task Status Stats
+ 
+// ✅ 7. Stop Task Timer
+ 
+// ✅ 6. Start Task Timer
+ 
+// ✅ 5. Delete Task
+ 
+// ✅ 4. Update Task
+ 
+// ✅ 3. Get Task by ID
+ 
+ ✅ 2. Get Tasks by Project
+ 
+// ✅ 1. Create Task
+ 
+// Make sure logs directory exists
+ 
+const { createLogger, format, transports } = require("winston");
+
+const logger = createLogger({
+  level: "info", 
+  format: format.combine(
+    format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+    format.errors({ stack: true }),
+    format.colorize(),
+    format.printf(({ timestamp, level, message, stack }) => {
+      return `${timestamp} [${level}]: ${stack || message}`;
+    })
+  ),
+  transports: [
+    new transports.Console(),
+    new transports.File({ filename: "logs/error.log", level: "error" }),
+    new transports.File({ filename: "logs/combined.log" }),
+  ],
+});
+
+module.exports = logger;
+ 
+// ✅ FIND PROJECT BY ID (raw, no owner check – internal use)
+ 
+🧨 cascade delete
+ 
+// ✅ DELETE PROJECT (and its tasks)
+ 
+// ✅ UPDATE PROJECT
+ 
+// ✅ GET PROJECT BY ID
+ 
+// ✅ GET ALL PROJECTS BY USER
+ 
+/ from authMiddleware
+ 
+// ✅ CREATE PROJECT
+ 
+require("dotenv").config();
+const User = require("../models/User");
+const Task = require("../models/Task");
+const validationResult = require("express-validator");
+const validateRequest = require("../middlewares/validateRequest");
+
+
+const createProject
+ = async (req,res) =>{
+    const{
+        userId,
+        name,
+        description,
+        startTime,
+        isRunning
+    } = req.body;
+
+    const errors =[];
+    if(
+        !userId || !name || !description || !startTime || !isRunning
+    ){
+        errors.push("Please fill all necessary fields");
+    }
+
+    if(errors.length > 0){
+        return res.status(400).json({errors});
+    }
+
+    try{
+        const project = await User.findById(userId);
+        if(!user){
+            return res.status(400).json({msg: "User not found"});
+        }
+
+        const newProject = new Project ({
+            projectName : user.name,
+            projectDescription : user.description,
+           projectStartTime : startTime,
+           projectIsRunning: isRunning,
+     });
+
+        await newProject.save();
+    }
+};
+
+
+const getProject = async(req,res) =>{
+    try{
+        const project = await Project.find({userId :req.userId});
+        res.status(200).json({project});       
+    }catch (err){
+        res.status(500).json({err});
+    }
+};
+
+const getProjectById = async (req,res) => {
+    try{
+        const project = await Project.findById(req.params.id);
+        res.status(200).json ({project});
+    }catch(err){
+        res.status(500).json ({err});
+    }
+};
+
+const updateProject
+= async (req,res) => {
+    try{
+    const {projectId} = req.params;
+    const updatedData = req.body;
+
+    const project = await Project.findByIdAndUpdate(projectId, updatedData ,{new: true}) ;
+
+    if(!project){
+        return res.status(404).json({msg: "Project not Found"});
+    }
+    res.status(200).json({msg: "Project Updated Successfully", project});
+}catch{
+    res.status(500).json ({msg: "Server error"});
+}
+};
+
+const deleteProject
+= async (req,res) => {
+    try{
+        const {projectId} = req.params;
+        console.log("projectId");
+
+        const project = await Project.findByIdAndDelete(projectId);
+
+        if(!project){
+                  return res.status(404).json({msg: "Project not Found"});
+        }
+            res.status(200).json({msg: "Project DeletedSuccessfully", project});
+    }catch{
+        res.status(500).json ({msg: "Server error"});
+    }
+
+};
+
+const getProjectByUser = async (req,res) =>{
+    try{
+        const userId = req.params.userId;
+        const project = await Project.find({userId});
+        if(!project){
+            res.status(0).json({msg:})
+                0,
+        }
+        else{
+            res.status(200).json({msg: "Project found", project});
+        } 
+        catch{
+            res.status(500).json ({msg: "Server error"});
+        }
+    }
+}
+const updateProjectByUser = async (req,) => {
+    try{
+        const {projectId} = req.params;
+        const project = await Project.findByIdAndUpdate()
+        if(!project){
+            console.log("");
+            return res.status()
+            }
+        }
+        catch{
+            console.log("");
+        }
+        }
+
+        const findProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const project = await Project.findById(projectId);
+    if (!job) {
+      return res.status(404).json({ msg: "Project not found." });
+    }
+
+    res.status(200).json({ project: project, msg: "." });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error." });
+  }
+};
+  
+        module.exports = {
+            createProject,
+            updateProjectByUser,
+            findProject,
+            getProject,
+            updateProject,
+            deleteProject,
+            getProjectByUser
+
+        };
+
+ 
+Job deleted successfully
+ 
+  }
+}
+ 
+Updated 
+ 
+0
+ 
+ // ✅ import logger
+ 
+require("dotenv").config();
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const path = require("path");
+const User = require("../models/User");
+const Upload = require("../utils/multerConfig");
+const sendEmail = require("../utils/mailer");
+const { generateToken, generateVerifyToken } = require("../utils/token");
+const logger = require("../utils/logger");
+
+
+
+const registerUser = async (req, res) => {
+  Upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "cv", maxCount: 1 },
+  ])(req, res, async (err) => {
+    try {
+      if (err) return res.status(400).json({ msg: err.message });
+
+      const { name, email, password } = req.body;
+      if (!name || !email || !password) {
+        return res.status(400).json({ msg: "All fields are required." });
+      }
+
+      const existing = await User.findOne({ email });
+      if (existing) return res.status(400).json({ msg: "User already exists." });
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const user = await User.create({
+        name,
+        email,
+        password: hashedPassword,
+        image: req.files?.image?.[0]?.filename || null,
+        cv: req.files?.cv?.[0]?.filename || null,
+      });
+
+      const verifyToken = generateVerifyToken(user._id);
+      const verifyLink = `${process.env.CLIENT_URL}/verify-email/${verifyToken}`;
+
+      await sendEmail({
+        to: user.email,
+        subject: "Verify Your DevTrack Account",
+        text: `Hello ${user.name}, please verify your email by clicking: ${verifyLink}`,
+      });
+
+      res.status(201).json({
+        msg: "User registered. Verification email sent.",
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          image: `/uploads/${user.image}`,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ msg: "Server error", error: error.message });
+    }
+  });
+};
+
+
+const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user) return res.status(404).json({ msg: "User not found" });
+    if (user.isVerified) return res.status(400).json({ msg: "Already verified" });
+
+    user.isVerified = true;
+    await user.save();
+
+    res.json({ msg: "Email verified successfully" });
+  } catch (err) {
+    res.status(400).json({ msg: "Invalid or expired token" });
+  }
+};
+
+
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email }).select("+password");
+
+    if (!user) return res.status(400).json({ msg: "Invalid credentials" });
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) return res.status(400).json({ msg: "Invalid credentials" });
+
+    if (!user.isVerified) {
+      return res.status(403).json({ msg: "Please verify your email first." });
+    }
+
+    const token = generateToken(user._id);
+
+    res.json({
+      msg: "Login successful",
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        token,
+        image: `/uploads/${user.image}`,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+
+const getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    res.json({
+      ...user._doc,
+      image: user.image ? `/uploads/${user.image}` : null,
+    });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+
+const updateUserProfile = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (password) user.password = password; // schema will hash it
+
+    await user.save();
+
+    res.json({ msg: "Profile updated", user });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+
+const deleteUserAccount = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    await user.deleteOne();
+
+    res.json({ msg: "User deleted" });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
+    await user.save();
+
+    const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+
+    await sendEmail({
+      to: email,
+      subject: "Reset Your Password",
+      text: `Click here to reset your password: ${resetLink}`,
+    });
+
+    res.json({ msg: "Reset link sent" });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+
+const resetPassword = async (req, res) => {
+  try {
+    const resetToken = req.params.token;
+    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) return res.status(400).json({ msg: "Token expired or invalid" });
+
+    const { password } = req.body;
+    if (!password || password.length < 6) {
+      return res.status(400).json({ msg: "Password must be at least 6 chars" });
+    }
+
+    user.password = password;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.json({ msg: "Password reset successful" });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+module.exports = {
+  registerUser,
+  loginUser,
+  getUserProfile,
+  updateUserProfile,
+  deleteUserAccount,
+  forgotPassword,
+  resetPassword,
+  verifyEmail,
+};
+ 
+ById(req.params.)
+ 
+ddProject
+ 
+  res.status(201).json({msg:})
+ 
+");
+ 
+/ default log level
+ 
+{ check, 
+ 
+// 📌 Reset Password
+ 
+// 📌 Forgot Password
+ 
+// 📌 Delete Account
+ 
+// 📌 Update Profile
+ 
+// 📌 Profile
+ 
+// 📌 Logi
+ 
+// 📌 Email verification
+ 
+// 📌 Register
+ 
+// Generate email verification token
+const generateVerifyToken = (id) =>
+  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+ 
+require("dotenv").config();
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const path = require("path");
+const User = require("../models/User");
+const Upload = require("../utils/multerConfig");
+const sendEmail = require("../utils/mailer");
+const  generateToken = require("../utils/token");
+const crypto = require("crypto");
+
+
+
+
+const registerUser = async (req, res) => {
+  Upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "cv", maxCount: 1 },
+  ])(req, res, async (err) => {
+    try {
+      if (err) {
+        return res.status(400).json({ msg: err.message });
+      }
+
+      const { name, email, password } = req.body;
+      if (!name || !email || !password) {
+        return res.status(400).json({ msg: "All fields are required." });
+      }
+
+      const existing = await User.findOne({ email });
+      if (existing) {
+        return res.status(400).json({ msg: "User already exists." });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const newUser = await User.create({
+        name,
+        email,
+        password: hashedPassword,
+        image: req.files?.image?.[0]?.filename || null,
+        cv: req.files?.cv?.[0]?.filename || null,
+      });
+
+      const token = generateToken(newUser._id);
+
+      await sendEmail({
+        to: newUser.email,
+        subject: "Welcome to DevTrack ",
+        text: `Hi ${newUser.name}, welcome aboard!`,
+      });
+
+      res.status(201).json({
+        msg: "User registered",
+        user: {
+          _id: newUser._id,
+          name: newUser.name,
+          email: newUser.email,
+          image: newUser.image,
+          cv: newUser.cv,
+          token,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ msg: "Server error", error: error.message });
+    }
+  });
+};
+
+
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email }).select("+password");
+
+    if (!user) return res.status(400).json({ msg: "Invalid credentials" });
+
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) return res.status(400).json({ msg: "Invalid credentials" });
+
+    const token = generateToken(user._id);
+
+    res.status(200).json({
+      msg: "Login successful",
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        token,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+
+const getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) return res.status(404).json({ msg: "User not found" });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+
+const updateUserProfile = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (password) user.password = await bcrypt.hash(password, 10);
+
+    const updatedUser = await user.save();
+
+    res.json({
+      msg: "Profile updated",
+      user: {
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+
+const deleteUserAccount = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    await user.remove();
+
+    res.json({ msg: "User deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+ 
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const hashToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+
+    user.resetPasswordToken = hashToken;
+    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    await user.save();
+
+    const resetLink = `http://localhost:3900/api/users/reset-password/${resetToken}`;
+
+    await sendEmail({
+      to: user.email,
+      subject: "Reset your password",
+      text: `You requested a password reset. Click this link to reset: ${resetLink}`,
+    });
+
+    res.json({ msg: "Password reset link sent" });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const resetToken = req.params.token;
+    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ msg: "Invalid or expired token" });
+    }
+
+    const { password } = req.body;
+    if (!password || password.length < 6) {
+      return res.status(400).json({ msg: "Password must be at least 6 characters" });
+    }
+
+    user.password = await bcrypt.hash(password, 10);
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+
+    await user.save();
+
+    res.json({ msg: "Password reset successful" });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+module.exports = {
+  registerUser,
+  loginUser,
+  getUserProfile,
+  updateUserProfile,
+  deleteUserAccount,
+  forgotPassword,
+  resetPassword,
+};
+ 
+const jwt = require('jsonwebtoken');
+const generateToken = (userId) => {
+  return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+    expiresIn: '30d',
+  });
+};
+
+module.exports = generateToken;
+ 
+// Auto-hash passwords before saving
+ 
+// Password check method
+ 
+    // Save hashed token and expiry
+ 
+   // Generate secure random token
+ 
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } =
+ 
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    await sendEmail({
+      to: email,
+      subject: "Password Reset Request",
+      text: `Hi ${user.name}, we received a password reset request.`,
+    });
+
+    res.json({ msg: "Password reset email sent." });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+ 
+Reset functionality not yet implemented).
+ 
+(Reset functionality not yet implemented).`
+ 
+// ❓ FORGOT PASSWORD (basic email)
+ 
+// ❌ DELETE ACCOUNT
+ 
+// 📝 UPDATE PROFILE
+ 
+// 👤 PROFILE
+ 
+// 🔐 LOGIN
+ 
+// CV filename from upload
+ 
+// image filename from upload
+ 
+// Compare entered password with hashed password
+ 
+// Hash password before save
+ 
+// 👤 REGISTER
+ 
+// 🔐 JWT Generator
+const generateToken = (userId) =>
+  jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: "30d" });
+ 
+require("dotenv").config();
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const multer = require("multer");
+const Project = require("../models/Project");
+const Task = require("../models/Task");
+const User = require("../models/User");
+const path = require('path');
+const nodemailer = require('nodemailer');
+const Upload = require('../utils/multerConfig');
+const sendEmail = require("../utils/mailer");
+
+
+ 
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, "../uploads"));
+  },
+  filename: (req, file, cb) => {
+    cb(
+      null,
+      `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`,
+    );
+  },
+});
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 1024 * 1024 * 5 },
+  fileFilter: (req, file, cb) => {
+    const fileTypes = /jpeg|jpg|png|pdf|doc|docx/;
+    const extname = fileTypes.test(
+      path.extname(file.originalname).toLowerCase(),
+    );
+    const mimeType = fileTypes.test(file.mimetype);
+
+    if (extname && mimeType) {
+      cb(null, true);
+    } else {
+      cb(new Error("Invalid file type"));
+    }
+  },
+}).fields([
+  { name: "image", maxCount: 1 },
+  { name: "cv", maxCount: 1 },
+]);
+
+const parseNestedFields = (req) => {
+  try {
+    // Parse JSON strings to objects
+
+
+    // Convert numeric fields
+
+
+    // Convert boolean fields
+ 
+
+
+
+const registerUser = async (req, res) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: "ralekeegan@gmail.com",
+      pass: "akfg isge aqkc pgfg",
+    },
+  });
+
+  upload(req, res, async (err) => {
+    try {
+      if (err) {
+        console.error("Multer Error:", err.message);
+        return res.status(400).json({ msg: err.message });
+      }
+
+      // Parse nested fields before validation
+      parseNestedFields(req);
+      console.log("Processed Request Body:", req.body);
+
+      // Destructure parsed values
+      const {}
+
+
+
+ 
+    // Convert education details
+ 
+    
+
+    // Convert work experience details
+    if (req.body.workExperience.details) {
+      req.body.workExperience.details.startYear = Number(
+        req.body.workExperience.details.startYear,
+      );
+      req.body.workExperience.details.endYear = Number(
+        req.body.workExperience.details.endYear,
+      );
+    }
+  } catch (error) {
+    console.error("Parsing error:", error);
+    throw new Error("Invalid data format");
+  }
+};
+ 
+   if (req.body.education.details) {
+      req.body.education.details.gradYear = Number(
+        req.body.education.details.gradYear,
+      );
+ 
+   req.body.termsAccepted = req.body.termsAccepted === "true";
+ 
+    req.body.yearsOfExperience = Number(req.body.yearsOfExperience);
+ 
+    req.body.jobCategories = JSON.parse(req.body.jobCategories);
+    req.body.education = JSON.parse(req.body.education);
+    req.body.workExperience = JSON.parse(req.body.workExperience);
+ 
+// Now req.user = { id: ... }
+ 
+const jwt = require("jsonwebtoken");
+
+const authMiddleware = (req, res, next) => {
+    const token = req.header("Authorization");
+
+    if (!token) {
+        return res.status(401).json({ msg: "No token, authorization denied" });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+        next(); 
+    } catch (err) {
+        console.error(err.message);
+        res.status(401).json({ msg: "Invalid token" });
+    }
+};
+
+module.exports = authMiddleware;
+
+
+ 
+// Connect to DB, then start server
+ 
+const mongoose = require ("mongoose");
+const app = require("./app");
+require("dotenv").config();
+const connectDB = require("./config/db");
+
+connectDB();
+
+
+
+
+const PORT = process.env.PORT || 3900;
+const MONGO_URI = process.env.MONGO_URI;
+
+mongoose.connect(
+    MONGO_URI,{
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+    })
+.then(() => {
+    console.log("connected to MONGODB");
+    app.listen(PORT, () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
+    });
+})
+.catch(err => {
+    console.error("Failed to connect to MONGODB:" ,err.message);
+});
+
+ 
+/ Exit process with failure
+ 
+// in minutes
+ 
